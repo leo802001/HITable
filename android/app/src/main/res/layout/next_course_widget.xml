@@ -1,0 +1,418 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  今日课程小组件。
+
+  ⚠️⚠️ RemoteViews 控件白名单（「小组件加载出错」的根因，勿违反）⚠️⚠️
+  只支持：LinearLayout / FrameLayout / RelativeLayout / GridLayout / GridView /
+  ListView / TextView / ImageView / ImageButton / Button / ProgressBar /
+  Chronometer / ViewFlipper / AdapterViewFlipper / StackView / AnalogClock / ViewStub
+  **纯 `View` 不在白名单里** —— 在 HarmonyOS / EMUI 上会 inflate 失败、整块显示不出来。
+  左侧色条因此用 **ImageView + setImageViewBitmap**（代码画圆角小图），
+  既能有圆角，又能跟随配色换颜色。
+
+  其他约束：
+  - 不用 View.addView 动态加行（部分 ROM 不支持）→ 固定槽位 + GONE
+  - 不用 android:baselineAligned
+  - 颜色只写 6 位 #RRGGBB（8 位 #AARRGGBB 部分 ROM 解析失败）
+
+  ── 结构说明（v1.1.9 加入小组件自定义背景）──
+  - 根是 FrameLayout：`widget_bg` 是**自定义背景图层**（仅自定义背景模式 VISIBLE），
+    内容整体包在 `widget_content` 里、padding 与原版完全一致。
+  - 每个槽位是 FrameLayout，内含两层：
+      `slotN_card` —— 空的 FrameLayout，圆角 drawable 作背景，
+        「课程卡片透明度」用 `setAlpha` 作用在这一层（文字因此不受影响）。
+        ⚠️ 这里**不能**用 ImageView 画位图：`fitXY` 会把 10dp 圆角按横竖不同
+        比例拉伸成椭圆，而 drawable 的圆角在任何尺寸下都精确。
+      `slotN` 内层 LinearLayout —— 原内容，属性一字未改。
+  - 非自定义背景模式下 `slotN_card` 的 alpha 恒为 1，观感与 1.1.8 完全一致。
+-->
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_background"
+    android:clipToOutline="true">
+
+    <!-- 自定义背景图。
+         ⚠️ scaleType 必须是 centerCrop，不能是 fitXY：
+         fitXY 只在「位图尺寸恰好等于 View 尺寸」时才铺满，
+         而小组件的真实像素尺寸取不到可靠值（华为 launcher 会上报
+         64001dp 这种损坏值），一旦算错就会留白或直接 OOM。
+         centerCrop 无论位图多大、比例如何，都会缩放并居中裁切到铺满，
+         从结构上杜绝留白。圆角由根的 clipToOutline 负责。 -->
+    <ImageView
+        android:id="@+id/widget_bg"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@null"
+        android:scaleType="centerCrop"
+        android:visibility="gone" />
+
+    <LinearLayout
+        android:id="@+id/widget_content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:paddingHorizontal="16dp"
+        android:paddingVertical="14dp">
+
+        <!--
+          头部：左列「日期 / 周次」，右列「节数 / 节课」——两列同构，
+          行与行对齐（第 1 行大字 19sp，第 2 行小字 10sp）。
+          右列 marginEnd 让文字不越过下方课程卡片的外边界。
+        -->
+        <LinearLayout
+            android:id="@+id/widget_header"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="9dp"
+            android:orientation="horizontal">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/widget_date_label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="#1D2939"
+                    android:textSize="19sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/widget_week_label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:textColor="#667085"
+                    android:textSize="9sp" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:layout_marginEnd="2dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/widget_count_label"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:textColor="#0A84FF"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/widget_count_unit"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center"
+                    android:text="节课"
+                    android:textColor="#667085"
+                    android:textSize="9sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ============ 4 个固定课程槽位 ============
+             外层 FrameLayout 的 id 仍是 slotN，Kotlin 的 setViewVisibility 照旧生效。
+             卡片底色搬到 slotN_card 这一层，好让「卡片透明度」独立于文字。 -->
+
+        <!-- 槽位 1 -->
+        <FrameLayout
+            android:id="@+id/slot1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="6dp">
+
+            <FrameLayout
+                android:id="@+id/slot1_card"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/widget_slot_next" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="9dp"
+                android:paddingTop="7dp"
+                android:paddingEnd="9dp"
+                android:paddingBottom="7dp">
+
+                <ImageView
+                    android:id="@+id/slot1_bar"
+                    android:layout_width="3dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginEnd="9dp"
+                    android:contentDescription="@null"
+                    android:minHeight="28dp"
+                    android:scaleType="fitXY" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/slot1_name"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:textColor="#111111"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/slot1_meta"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:textColor="#8A8A8E"
+                        android:textSize="9sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/slot1_status"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:maxLines="1"
+                    android:textColor="#FF9500"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- 槽位 2 -->
+        <FrameLayout
+            android:id="@+id/slot2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="6dp">
+
+            <FrameLayout
+                android:id="@+id/slot2_card"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/widget_slot_next" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="9dp"
+                android:paddingTop="7dp"
+                android:paddingEnd="9dp"
+                android:paddingBottom="7dp">
+
+                <ImageView
+                    android:id="@+id/slot2_bar"
+                    android:layout_width="3dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginEnd="9dp"
+                    android:contentDescription="@null"
+                    android:minHeight="28dp"
+                    android:scaleType="fitXY" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/slot2_name"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:textColor="#111111"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/slot2_meta"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:textColor="#8A8A8E"
+                        android:textSize="9sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/slot2_status"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:maxLines="1"
+                    android:textColor="#FF9500"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- 槽位 3 -->
+        <FrameLayout
+            android:id="@+id/slot3"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="6dp">
+
+            <FrameLayout
+                android:id="@+id/slot3_card"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/widget_slot_next" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="9dp"
+                android:paddingTop="7dp"
+                android:paddingEnd="9dp"
+                android:paddingBottom="7dp">
+
+                <ImageView
+                    android:id="@+id/slot3_bar"
+                    android:layout_width="3dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginEnd="9dp"
+                    android:contentDescription="@null"
+                    android:minHeight="28dp"
+                    android:scaleType="fitXY" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/slot3_name"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:textColor="#111111"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/slot3_meta"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:textColor="#8A8A8E"
+                        android:textSize="9sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/slot3_status"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:maxLines="1"
+                    android:textColor="#FF9500"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- 槽位 4 -->
+        <FrameLayout
+            android:id="@+id/slot4"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp">
+
+            <FrameLayout
+                android:id="@+id/slot4_card"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="@drawable/widget_slot_next" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="9dp"
+                android:paddingTop="7dp"
+                android:paddingEnd="9dp"
+                android:paddingBottom="7dp">
+
+                <ImageView
+                    android:id="@+id/slot4_bar"
+                    android:layout_width="3dp"
+                    android:layout_height="match_parent"
+                    android:layout_marginEnd="9dp"
+                    android:contentDescription="@null"
+                    android:minHeight="28dp"
+                    android:scaleType="fitXY" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/slot4_name"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:textColor="#111111"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/slot4_meta"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:textColor="#8A8A8E"
+                        android:textSize="9sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/slot4_status"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:maxLines="1"
+                    android:textColor="#FF9500"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- 空态 / 折叠提示 -->
+        <TextView
+            android:id="@+id/widget_empty"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:textColor="#8A8A8E"
+            android:textSize="13sp"
+            android:visibility="gone" />
+    </LinearLayout>
+</FrameLayout>

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  小组件配色（深色）。系统切深色时由 Android 自动选用，无需代码介入。
+-->
+<resources>
+    <color name="widget_surface">#141518</color>
+    <color name="widget_surface_border">#2A2C31</color>
+
+    <!-- 课程卡片底色（按状态） -->
+    <color name="widget_slot_next_bg">#232325</color>
+    <color name="widget_slot_now_bg">#12325B</color>
+    <color name="widget_slot_done_bg">#232325</color>
+</resources>

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  小组件配色（浅色）。
+  被 drawable/ 引用，因此不会被 AAPT2 裁掉。深色对应 values-night/colors.xml。
+-->
+<resources>
+    <!-- 外层卡片 -->
+    <color name="widget_surface">#F8FAFC</color>
+    <color name="widget_surface_border">#E4E7EC</color>
+
+    <!-- 课程卡片底色（按状态）；圆角在 drawable 里，这里只管颜色 -->
+    <color name="widget_slot_next_bg">#F2F2F7</color>
+    <color name="widget_slot_now_bg">#E3F0FF</color>
+    <color name="widget_slot_done_bg">#EFEFF4</color>
+</resources>

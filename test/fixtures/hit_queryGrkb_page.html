@@ -1,0 +1,858 @@
+
+
+ 
+
+
+
+
+
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <title>学生个人课表查询</title>
+    
+
+<link href="/resources/css/common/style.css" rel="stylesheet" type="text/css" />
+<link href="/resources/css/common/content.css" rel="stylesheet" type="text/css" />
+<link href="/resources/css/common/pageTag.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript" src="/resources/js/jquery/jquery-4.2.1.min.js"></script>
+
+ <script src="/resources/js/jquery/jquery.form.js"  type="text/javascript"></script>
+<script type="text/javascript" src="/resources/js/common/validator.js" ></script>
+<script type="text/javascript" src="/resources/js/common/jqcheckBox.js"></script>
+<script type="text/javascript" src="/resources/js/jquery/jquery.chained.remote.js"></script>
+<script type="text/javascript" src="/resources/js/common/jqreload.js"></script>
+<link rel="stylesheet" type="text/css" href="/resources/js/sweetalert2/sweetalert2.css">
+<script src="/resources/js/sweetalert2/sweetalert2.min.js"></script>
+<style type="text/css">
+
+	.Contentbox { width:100%; min-height:100%;height:auto }
+	*html .Contentbox { height:100% }
+</style>
+    <script type="text/javascript" src="/resources/js/jquery/jquery.form.js"></script>
+    <script type="text/javascript" src="/resources/js/common/modalpopup.js"></script>
+    <style>
+    /* 1. 强制隐藏整个页面的垂直滚动条 */
+    html, body {
+        height: 100%;
+        overflow-x: hidden; 
+        margin: 0;
+        padding: 0;
+    }
+</style>
+    <style>
+        .fdj-icon{display:inline-block;background:url(/resources/images/common/fdj.png) no-repeat center;width:24px;height:24px;vertical-align:middle;}
+        .fdj1-icon{display:inline-block;background:url(/resources/images/common/fdj1.png) no-repeat center;width:24px;height:24px;vertical-align:middle;}
+    </style>
+    <script type="text/javascript">
+        jQuery().ready(function (){
+            
+
+            $("a[id^='jcgl']").on("click",function( ){
+                var rwh=$(this).attr('id').split('_')[1];
+
+                document.queryform.action = "/jcgl/queryJcrwdyList_xs?pageRwh="+rwh;
+                document.queryform.submit();
+
+            });
+
+
+        });
+
+
+        //查询
+        function queryLike(){
+            document.queryform.action = "/kbcx/queryGrkb";
+            document.queryform.submit();
+        }
+
+        //导出
+        function exportExcel(){
+            document.queryform.action = "/kbcx/ExportGrKbxx";
+            document.queryform.submit();
+        }
+
+        //查询周课表
+        function queryZkb(){
+            document.queryform.action = "/kbcx/queryXszkb";
+            document.queryform.submit();
+        }
+        function kbqr(){
+            document.queryform.action = "/kbcx/kbqr";
+            $("#queryform").ajaxSubmit(function(result){
+                if(result==null || result =="" ){
+                    alert("课表确认成功!");
+                    document.queryform.action = "/kbcx/queryGrkb";
+                    document.queryform.submit();
+                }else{
+                    alert("课表确认失败!");
+                    document.queryform.action = "/kbcx/queryGrkb";
+                    document.queryform.submit();
+
+                }
+            })
+        }
+        //弹出层
+        function wqrkcxx(){
+            var src = "/kbcx/queryWqrkbList?xnxq="+$('#xnxq').val();
+            jQuery("#iframename_js").attr("src",src);
+            BOX_show('NeworEdit1');
+        }
+
+        //查询
+        function queryLike1(){
+            document.queryform.action = "/kbcx/queryXsxkXq";
+            document.queryform.submit();
+        }
+
+        function ewm(rwh){
+            var src = "/rwcx/queryEwm?rwh="+rwh;
+            jQuery("#iframename_ewm").attr("src",src);
+            BOX_show('ewm_see');
+        }
+		  function cxjxrl(rwh){
+		            var src = "/rwcx/queryCxjxrl?rwh="+rwh;
+		            jQuery("#iframename_cxjxrl").attr("src",src);
+		            BOX_show('cxjxrl_see');
+		        }
+
+
+        function ewm_y(rwh){
+            var src = "http://gcourse.hit.edu.cn/ckxxxkmd/queryewmzp?rwh="+rwh;
+            jQuery("#iframename_ewm").attr("src",src);
+            BOX_show('ewm_see');
+        }
+
+
+        //查询周课表shiyan
+        function querySykb(){
+            document.queryform.action = "/kbcx/queryXszkb_sy";
+            document.queryform.submit();
+        }
+
+        function ckpkxx(rwh){
+            var xnxq = $("#xnxq").val();
+            BOX_show('divBox_jtxx');
+            $("#cdjy_tabid").empty();
+            $("#bz").html("");
+
+            var tabHtml="";
+            //判断是否已申请
+            if(rwh !='' && xnxq!=''){
+                var url= "/kbcx/querySkmx";
+                $.post(url,{"xnxq":xnxq,"rwh":rwh},function(result){
+                    if(result!=null ){//有值
+                        kk=result.length-1;
+                        if(result.length>0){
+                            $.each(result,function(i,value){
+
+                                tabHtml+="	<tr>";
+                                tabHtml+="		<td style=\"text-align: center;width: 20%\">"+value.SKSJ+"</td>";
+                                tabHtml+="		<td style=\"text-align: center;width: 20%\">"+value.JTSJ1+"-"+value.JTSJ2+"</td>";
+                                tabHtml+="		<td style=\"text-align: center;width: 30%\">"+value.SKDD+"</td>";
+                                tabHtml+="		<td style=\"text-align: center;width: 20%\">";
+
+                                tabHtml+="			<select disabled id=\"skjs"+i+"\"  >";
+                                var url= "/kcwh/queryJsList";
+                                $.post(url,{"xnxq":xnxq,"rwh":rwh},function(result){
+                                    var option="<option value=''>-请选择-</option>";
+                                    $.each(result,function(k,v){
+                                        if(value.SKJS == v.ZGH){
+                                            option+="<option value='"+v.ZGH+"'  selected>"+v.JSXM+"</option>";
+                                        }
+                                    });
+                                    var z="skjs"+i;
+                                    $("#"+z).append(option);
+                                },"json");
+                                tabHtml+="			</select>";
+                                tabHtml+="		</td>";
+                                tabHtml+="	</tr>";
+                            });
+                        }else{
+                            tabHtml+="	<tr>";
+                            tabHtml+="		<td style=\"text-align: center;\" colspan='4'>没有数据!</td>";
+                            tabHtml+="	</tr>";
+                        }
+                    }
+                    $("#cdjy_tabid").append(tabHtml);
+                },"json");
+            }
+
+            var url2= "/kcwh/queryRwbz";
+            $.post(url2,{rwh:rwh},function(rs){
+                $("#bz").html(rs.XKYQ);
+            },'json');
+        }
+    </script>
+</head>
+
+<body>
+<div class="Contentbox">
+    <div class="pd10">
+        <div class="address">当前位置：学生选课 >> <a href="javascript:void(0);" onclick="javascript:queryLike();return false;">个人课表查询</a></div>
+        <div class="clr"></div>
+        <div class="butsea" >
+            <form id="queryform" name="queryform" method="post">
+
+                <input type="hidden" name="fhlj" value="kbcx/queryGrkb"/>
+                <table  border="0" align="left" cellpadding="0" cellspacing="0"  >
+                    <tr>
+                        <td>学年学期：</td>
+                        <td>
+                            <select name="xnxq" id="xnxq"  class="XNXQ_CON" onchange="javascript:queryLike();return false;">
+                                
+                                    <option value="2027-20281" >2027秋季</option>
+                                
+                                    <option value="2026-20274" >2027寒假</option>
+                                
+                                    <option value="2026-20273" >2027夏季</option>
+                                
+                                    <option value="2026-20272" >2027春季</option>
+                                
+                                    <option value="2026-20271" selected>2026秋季</option>
+                                
+                            </select>
+                        </td>
+                        
+                            <td>
+                                <div class="addlist_button1 ml15"><a href="javascript:void(0);" onclick="javascript:exportExcel();return false;"><span>导出课表</span></a></div>
+                            </td>
+                        
+                        
+
+
+                    </tr>
+
+                </table>
+            </form>
+        </div>
+        <div><span >课表确认时间：~</span></div>
+        <div class="clr"></div>
+        <div class="Menubox" >
+            <ul>
+                <li><a href="javascript:void(0);"  onclick="javascript:queryLike1();return false;" >学生选课信息查询</a></li>
+                <li class="hover"><a href="javascript:void(0);"  onclick="javascript:queryLike();return false;" >学生总课表</a></li>
+                <li><a href="javascript:void(0);"  onclick="javascript:queryZkb();return false;" >学生周课表</a></li>
+                <li><a href="javascript:void(0);"  onclick="javascript:querySykb();return false;" >学生实验课表</a></li>
+            </ul>
+        </div>
+        <div class="clr"></div>
+<div class="xfyq_area mt10">
+    <div class="xfyq_top" style="text-align:center; background: linear-gradient(135deg, #4285f4 0%, #34a853 100%); color: white; padding: 12px; border-radius: 8px 8px 0 0; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <span class="ml10 bold" style="font-size: 18px; text-shadow: 1px 1px 2px rgba(0,0,0,0.2);">2026秋季学期(2026000000)张三课表(2026-09-17 18:57:24)</span>
+    </div>
+    <div class="xfyq_con" style="border: 1px solid #e0e0e0; border-top: none; border-radius: 0 0 8px 8px; padding: 15px; background-color: #f9f9f9; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <table width="100%"  cellpadding="0" cellspacing="0" style="border-collapse:collapse; background-color: white; border-radius: 6px; overflow: hidden;" class="addlist_01">
+            <tr style="background: #f0f7ff;">
+                <th width="40" height="30" colspan="2" style="color: #1967d2; border: 1px solid #d1d1d1;">&nbsp;</th>
+                <th style="color: #1967d2; border: 1px solid #d1d1d1; background: linear-gradient(45deg, #e8f0fe 0%, #d2e3fc 100%);">星期一</th>
+                <th style="color: #1967d2; border: 1px solid #d1d1d1; background: linear-gradient(45deg, #e6f4ea 0%, #d1eade 100%);">星期二</th>
+                <th style="color: #1967d2; border: 1px solid #d1d1d1; background: linear-gradient(45deg, #fef7e0 0%, #fde6b3 100%);">星期三</th>
+                <th style="color: #1967d2; border: 1px solid #d1d1d1; background: linear-gradient(45deg, #fce8e6 0%, #f9d3cf 100%);">星期四</th>
+                <th style="color: #1967d2; border: 1px solid #d1d1d1; background: linear-gradient(45deg, #fce4f6 0%, #f9c9f3 100%);">星期五</th>
+                <th style="color: #1967d2; border: 1px solid #d1d1d1; background: linear-gradient(45deg, #e6e6fa 0%, #d8d8ff 100%);">星期六</th>
+                <th style="color: #1967d2; border: 1px solid #d1d1d1; background: linear-gradient(45deg, #e0f7fa 0%, #b2ebf2 100%);">星期日</th>
+            </tr>
+            
+                <tr >
+                    <td width="20" style="border: 1px solid #d1d1d1 ; padding: 8px; color: #5f6368; font-weight: 500;">上午</td>
+                    <td width="20" style="border: 1px solid #d1d1d1; padding: 8px; color: #5f6368; font-weight: 500;">第1,2节<br/></td>
+                    <!-- 星期一 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; background-color: #e8f0fe;" 
+                        onmouseover="this.style.backgroundColor='#d2e3fc'" 
+                        onmouseout="this.style.backgroundColor='#e8f0fe'">
+                        高等代数（1）</br>张老师[4-17]周A101
+                    </td>
+                    <!-- 星期二 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; background-color: #e6f4ea;" 
+                        onmouseover="this.style.backgroundColor='#d1eade'" 
+                        onmouseout="this.style.backgroundColor='#e6f4ea'">
+                        数学分析（1）</br>李老师[4-17]周C301<br/>
+                        
+                            &nbsp
+                        
+                            
+                        
+                            
+                        
+                            
+                        
+                            
+                        
+                            
+                        
+                    </td>
+                    <!-- 星期三 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; background-color: #fef7e0;" 
+                        onmouseover="this.style.backgroundColor='#fde6b3'" 
+                        onmouseout="this.style.backgroundColor='#fef7e0'">
+                        大学英语综合A(提高)</br>王老师[4-17]周B201
+                    </td>
+                    <!-- 星期四 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; background-color: #fce8e6;" 
+                        onmouseover="this.style.backgroundColor='#f9d3cf'" 
+                        onmouseout="this.style.backgroundColor='#fce8e6'">
+                        数学分析（1）</br>李老师[3]周C301
+                    </td>
+                    <!-- 星期五 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; background-color: #fce4f6;" 
+                        onmouseover="this.style.backgroundColor='#f9c9f3'" 
+                        onmouseout="this.style.backgroundColor='#fce4f6'">
+                        习近平新时代中国特色社会主义思想概论</br>陈老师[5-17]周A102<br/>
+                        
+                            &nbsp
+                            &nbsp
+                        
+                            
+                            
+                        
+                            
+                            
+                        
+                            
+                            
+                        
+                            
+                            
+                        
+                            
+                            
+                        
+                    </td>
+                    <!-- 星期六 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; " 
+                        onmouseover="this.style.backgroundColor='#d8d8ff'" 
+                        onmouseout="this.style.backgroundColor='transparent'">
+                        &nbsp
+                    </td>
+                    <!-- 星期日 -->
+                    <td width="122" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; " 
+                        onmouseover="this.style.backgroundColor='#b2ebf2'" 
+                        onmouseout="this.style.backgroundColor='transparent'">
+                        &nbsp
+                    </td>
+                </tr>
+            
+                <tr class="bgcol" style="background-color: #fafafa;">
+                    <td width="20" style="border: 1px solid #d1d1d1 ; padding: 8px; color: #5f6368; font-weight: 500;">上午</td>
+                    <td width="20" style="border: 1px solid #d1d1d1; padding: 8px; color: #5f6368; font-weight: 500;">第3,4节<br/></td>
+                    <!-- 星期一 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; background-color: #e8f0fe;" 
+                        onmouseover="this.style.backgroundColor='#d2e3fc'" 
+                        onmouseout="this.style.backgroundColor='#e8f0fe'">
+                        数学分析（1）</br>李老师[4-17]周C301
+                    </td>
+                    <!-- 星期二 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; background-color: #e6f4ea;" 
+                        onmouseover="this.style.backgroundColor='#d1eade'" 
+                        onmouseout="this.style.backgroundColor='#e6f4ea'">
+                        习近平新时代中国特色社会主义思想概论</br>陈老师[5-17]周A102<br/>
+                        
+                            
+                        
+                            &nbsp
+                        
+                            
+                        
+                            
+                        
+                            
+                        
+                            
+                        
+                    </td>
+                    <!-- 星期三 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; " 
+                        onmouseover="this.style.backgroundColor='#fde6b3'" 
+                        onmouseout="this.style.backgroundColor='transparent'">
+                        &nbsp
+                    </td>
+                    <!-- 星期四 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; background-color: #fce8e6;" 
+                        onmouseover="this.style.backgroundColor='#f9d3cf'" 
+                        onmouseout="this.style.backgroundColor='#fce8e6'">
+                        数学分析（1）</br>李老师[4-17]周C301
+                    </td>
+                    <!-- 星期五 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; background-color: #fce4f6;" 
+                        onmouseover="this.style.backgroundColor='#f9c9f3'" 
+                        onmouseout="this.style.backgroundColor='#fce4f6'">
+                        高等代数（1）</br>张老师[4-17]周A101<br/>
+                        
+                            
+                            
+                        
+                            &nbsp
+                            &nbsp
+                        
+                            
+                            
+                        
+                            
+                            
+                        
+                            
+                            
+                        
+                            
+                            
+                        
+                    </td>
+                    <!-- 星期六 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; " 
+                        onmouseover="this.style.backgroundColor='#d8d8ff'" 
+                        onmouseout="this.style.backgroundColor='transparent'">
+                        &nbsp
+                    </td>
+                    <!-- 星期日 -->
+                    <td width="122" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; " 
+                        onmouseover="this.style.backgroundColor='#b2ebf2'" 
+                        onmouseout="this.style.backgroundColor='transparent'">
+                        &nbsp
+                    </td>
+                </tr>
+            
+                <tr >
+                    <td width="20" style="border: 1px solid #d1d1d1 ; padding: 8px; color: #5f6368; font-weight: 500;">下午</td>
+                    <td width="20" style="border: 1px solid #d1d1d1; padding: 8px; color: #5f6368; font-weight: 500;">第5,6节<br/></td>
+                    <!-- 星期一 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; background-color: #e8f0fe;" 
+                        onmouseover="this.style.backgroundColor='#d2e3fc'" 
+                        onmouseout="this.style.backgroundColor='#e8f0fe'">
+                        大学英语综合A(提高)</br>王老师[4-17]周B201</br>数学分析（1）</br>李老师[3]周C301
+                    </td>
+                    <!-- 星期二 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; background-color: #e6f4ea;" 
+                        onmouseover="this.style.backgroundColor='#d1eade'" 
+                        onmouseout="this.style.backgroundColor='#e6f4ea'">
+                        高等代数（1）</br>张老师[7-12]周A101<br/>
+                        
+                            
+                        
+                            
+                        
+                            &nbsp
+                        
+                            
+                        
+                            
+                        
+                            
+                        
+                    </td>
+                    <!-- 星期三 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; background-color: #fef7e0;" 
+                        onmouseover="this.style.backgroundColor='#fde6b3'" 
+                        onmouseout="this.style.backgroundColor='#fef7e0'">
+                        体育（1）(乒乓球)</br>刘老师[4-17]周二区文体中心213乒乓球室
+                    </td>
+                    <!-- 星期四 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; background-color: #fce8e6;" 
+                        onmouseover="this.style.backgroundColor='#f9d3cf'" 
+                        onmouseout="this.style.backgroundColor='#fce8e6'">
+                        大学英语综合A(提高)</br>王老师[4-8]周B201</br>数学推理方法</br>John Smith[9-16]周B202
+                    </td>
+                    <!-- 星期五 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; background-color: #fce4f6;" 
+                        onmouseover="this.style.backgroundColor='#f9c9f3'" 
+                        onmouseout="this.style.backgroundColor='#fce4f6'">
+                        数学分析（1）</br>李老师[11-17]周C301<br/>
+                        
+                            
+                            
+                        
+                            
+                            
+                        
+                            &nbsp
+                            &nbsp
+                        
+                            
+                            
+                        
+                            
+                            
+                        
+                            
+                            
+                        
+                    </td>
+                    <!-- 星期六 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; " 
+                        onmouseover="this.style.backgroundColor='#d8d8ff'" 
+                        onmouseout="this.style.backgroundColor='transparent'">
+                        &nbsp
+                    </td>
+                    <!-- 星期日 -->
+                    <td width="122" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; " 
+                        onmouseover="this.style.backgroundColor='#b2ebf2'" 
+                        onmouseout="this.style.backgroundColor='transparent'">
+                        &nbsp
+                    </td>
+                </tr>
+            
+                <tr class="bgcol" style="background-color: #fafafa;">
+                    <td width="20" style="border: 1px solid #d1d1d1 ; padding: 8px; color: #5f6368; font-weight: 500;">下午</td>
+                    <td width="20" style="border: 1px solid #d1d1d1; padding: 8px; color: #5f6368; font-weight: 500;">第7,8节<br/></td>
+                    <!-- 星期一 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; " 
+                        onmouseover="this.style.backgroundColor='#d2e3fc'" 
+                        onmouseout="this.style.backgroundColor='transparent'">
+                        &nbsp
+                    </td>
+                    <!-- 星期二 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; background-color: #e6f4ea;" 
+                        onmouseover="this.style.backgroundColor='#d1eade'" 
+                        onmouseout="this.style.backgroundColor='#e6f4ea'">
+                        数学推理方法</br>John Smith[9-16]周B202<br/>
+                        
+                            
+                        
+                            
+                        
+                            
+                        
+                            &nbsp
+                        
+                            
+                        
+                            
+                        
+                    </td>
+                    <!-- 星期三 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; " 
+                        onmouseover="this.style.backgroundColor='#fde6b3'" 
+                        onmouseout="this.style.backgroundColor='transparent'">
+                        &nbsp
+                    </td>
+                    <!-- 星期四 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; " 
+                        onmouseover="this.style.backgroundColor='#f9d3cf'" 
+                        onmouseout="this.style.backgroundColor='transparent'">
+                        &nbsp
+                    </td>
+                    <!-- 星期五 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; " 
+                        onmouseover="this.style.backgroundColor='#f9c9f3'" 
+                        onmouseout="this.style.backgroundColor='transparent'">
+                        &nbsp<br/>
+                        
+                            
+                            
+                        
+                            
+                            
+                        
+                            
+                            
+                        
+                            &nbsp
+                            &nbsp
+                        
+                            
+                            
+                        
+                            
+                            
+                        
+                    </td>
+                    <!-- 星期六 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; " 
+                        onmouseover="this.style.backgroundColor='#d8d8ff'" 
+                        onmouseout="this.style.backgroundColor='transparent'">
+                        &nbsp
+                    </td>
+                    <!-- 星期日 -->
+                    <td width="122" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; " 
+                        onmouseover="this.style.backgroundColor='#b2ebf2'" 
+                        onmouseout="this.style.backgroundColor='transparent'">
+                        &nbsp
+                    </td>
+                </tr>
+            
+                <tr >
+                    <td width="20" style="border: 1px solid #d1d1d1 ; padding: 8px; color: #5f6368; font-weight: 500;">晚上</td>
+                    <td width="20" style="border: 1px solid #d1d1d1; padding: 8px; color: #5f6368; font-weight: 500;">第9,10节<br/></td>
+                    <!-- 星期一 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; " 
+                        onmouseover="this.style.backgroundColor='#d2e3fc'" 
+                        onmouseout="this.style.backgroundColor='transparent'">
+                        &nbsp
+                    </td>
+                    <!-- 星期二 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; background-color: #e6f4ea;" 
+                        onmouseover="this.style.backgroundColor='#d1eade'" 
+                        onmouseout="this.style.backgroundColor='#e6f4ea'">
+                        色彩美学</br>赵老师[3-5，7]周B203</br>哲学导论</br>田径[7-14]周A103<a  title='查看二维码' class='fdj-icon' href='javascript:void(0);' onclick="javascript:ewm('2026-2027-1-D4013-003');return false;"></a><br/>
+                        
+                            
+                        
+                            
+                        
+                            
+                        
+                            
+                        
+                            &nbsp
+                        
+                            
+                        
+                    </td>
+                    <!-- 星期三 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; " 
+                        onmouseover="this.style.backgroundColor='#fde6b3'" 
+                        onmouseout="this.style.backgroundColor='transparent'">
+                        &nbsp
+                    </td>
+                    <!-- 星期四 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; background-color: #fce8e6;" 
+                        onmouseover="this.style.backgroundColor='#f9d3cf'" 
+                        onmouseout="this.style.backgroundColor='#fce8e6'">
+                        探索光的奥秘</br>高波[6-13]周B204
+                    </td>
+                    <!-- 星期五 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; " 
+                        onmouseover="this.style.backgroundColor='#f9c9f3'" 
+                        onmouseout="this.style.backgroundColor='transparent'">
+                        &nbsp<br/>
+                        
+                            
+                            
+                        
+                            
+                            
+                        
+                            
+                            
+                        
+                            
+                            
+                        
+                            &nbsp
+                            &nbsp
+                        
+                            
+                            
+                        
+                    </td>
+                    <!-- 星期六 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; " 
+                        onmouseover="this.style.backgroundColor='#d8d8ff'" 
+                        onmouseout="this.style.backgroundColor='transparent'">
+                        &nbsp
+                    </td>
+                    <!-- 星期日 -->
+                    <td width="122" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; " 
+                        onmouseover="this.style.backgroundColor='#b2ebf2'" 
+                        onmouseout="this.style.backgroundColor='transparent'">
+                        &nbsp
+                    </td>
+                </tr>
+            
+                <tr class="bgcol" style="background-color: #fafafa;">
+                    <td width="20" style="border: 1px solid #d1d1d1 ; padding: 8px; color: #5f6368; font-weight: 500;">晚上</td>
+                    <td width="20" style="border: 1px solid #d1d1d1; padding: 8px; color: #5f6368; font-weight: 500;">第11,12节<br/></td>
+                    <!-- 星期一 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; " 
+                        onmouseover="this.style.backgroundColor='#d2e3fc'" 
+                        onmouseout="this.style.backgroundColor='transparent'">
+                        &nbsp
+                    </td>
+                    <!-- 星期二 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; background-color: #e6f4ea;" 
+                        onmouseover="this.style.backgroundColor='#d1eade'" 
+                        onmouseout="this.style.backgroundColor='#e6f4ea'">
+                        色彩美学</br>赵老师[3-5，7]周B203</br>哲学导论</br>田径[7-14]周A103<a  title='查看二维码' class='fdj-icon' href='javascript:void(0);' onclick="javascript:ewm('2026-2027-1-D4013-003');return false;"></a><br/>
+                        
+                            
+                        
+                            
+                        
+                            
+                        
+                            
+                        
+                            
+                        
+                            &nbsp
+                        
+                    </td>
+                    <!-- 星期三 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; " 
+                        onmouseover="this.style.backgroundColor='#fde6b3'" 
+                        onmouseout="this.style.backgroundColor='transparent'">
+                        &nbsp
+                    </td>
+                    <!-- 星期四 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; " 
+                        onmouseover="this.style.backgroundColor='#f9d3cf'" 
+                        onmouseout="this.style.backgroundColor='transparent'">
+                        &nbsp
+                    </td>
+                    <!-- 星期五 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; " 
+                        onmouseover="this.style.backgroundColor='#f9c9f3'" 
+                        onmouseout="this.style.backgroundColor='transparent'">
+                        &nbsp<br/>
+                        
+                            
+                            
+                        
+                            
+                            
+                        
+                            
+                            
+                        
+                            
+                            
+                        
+                            
+                            
+                        
+                            &nbsp
+                            &nbsp
+                        
+                    </td>
+                    <!-- 星期六 -->
+                    <td width="118" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; " 
+                        onmouseover="this.style.backgroundColor='#d8d8ff'" 
+                        onmouseout="this.style.backgroundColor='transparent'">
+                        &nbsp
+                    </td>
+                    <!-- 星期日 -->
+                    <td width="122" style="border: 1px solid #d1d1d1; padding: 6px; line-height: 1.4; transition: all 0.3s; vertical-align: top; " 
+                        onmouseover="this.style.backgroundColor='#b2ebf2'" 
+                        onmouseout="this.style.backgroundColor='transparent'">
+                        &nbsp
+                    </td>
+                </tr>
+            
+
+            
+                <tr>
+                    <td colspan="9" style="border: 1px solid #d1d1d1; padding: 10px; background-color: #fff8e1; color: #ff6d00;">其它课程：
+                        
+                            <a href="javascript:void(0)" onclick="ckpkxx('2026-2027-1-22E5022C-001');" style="color: #ff6d00; text-decoration: none; border-bottom: 1px dotted #ff6d00; margin: 0 5px;">【新时代实践教育◇尹胜君◇-◇】 </a>
+                        
+                            <a href="javascript:void(0)" onclick="ckpkxx('2026-2027-1-22E5011C-001');" style="color: #ff6d00; text-decoration: none; border-bottom: 1px dotted #ff6d00; margin: 0 5px;">【军事理论◇庞东贺◇1-3◇】 </a>
+                        
+                            <a href="javascript:void(0)" onclick="ckpkxx('2026-2027-1-22E5012C-001');" style="color: #ff6d00; text-decoration: none; border-bottom: 1px dotted #ff6d00; margin: 0 5px;">【军事技能◇◇◇】 </a>
+                        
+                    </td>
+                </tr>
+            
+
+            
+
+        </table>
+    </div>
+    <div class="clr"></div>
+</div>
+
+
+        <div class="clr"></div>
+        <div style="color: red;font-size:16px">
+            注意：“个人课表查询”是按照您的选课进行显示，请仔细与“班级推荐课表查询”页面进行对比，如发现个人课表中缺少本班级的推荐课程（特别是必修课），则说明您可能存在漏选情况，请认真核实，如有需要请及时进行补选。<br/>
+        </div>
+         <!-- <div style="color: #00DD00;font-size:16px">
+                 
+                 
+         上课作息时间表：(每节50分钟)<br/>
+                第1-2节： 8：00~9：45<br/>
+                第3-4节： 10：00~11：45<br/>
+                第5-6节： 13：45~15：30<br/>
+                第7-8节： 15：45~17：30<br/>
+                第9-10节： 18：30~20：15<br/>
+                第11节：20：30~21：20<br/>
+                第12节： 21：25~22：15<br/>
+                 </div> -->
+        <div class="clr"></div>
+    </div>
+</div>
+
+
+
+
+<div id="ewm_see" style="display:none; width: 650px;border: 1px solid #2c4f72;-webkit-box-shadow: 0px 0px 5px #000;-moz-box-shadow: 0px 0px 5px #000;box-shadow: 0px 0px 5px #000; " >
+    <form name="addOrUpdfrom" id="addOrUpdfrom" method="post">
+        <div class="Floatleft Pct100 popup_bg">
+            <div class="popup_left">二维码</div>
+            <a href="#" class="btn_close" onclick="javascript:BOX_remove('ewm_see');return false;"></a> </div>
+        <div class="clr"></div>
+        <div class="popup">
+            <div class="clr"></div>
+            <iframe id="iframename_ewm" name="iframename_ewm" border="0" framespacing="0" marginheight="0" marginwidth="0" style="width: 100%; height: 500px;" frameborder="0" allowTransparency="true"></iframe>
+            <div class="clr"></div>
+        </div>
+    </form>
+</div>
+<div id="cxjxrl_see" style="display:none; width: 950px;border: 1px solid #2c4f72;-webkit-box-shadow: 0px 0px 5px #000;-moz-box-shadow: 0px 0px 5px #000;box-shadow: 0px 0px 5px #000; " >
+    <form name="addOrUpdfrom_1" id="addOrUpdfrom_1" method="post">
+        <div class="Floatleft Pct100 popup_bg">
+            <div class="popup_left">教学日历</div>
+            <a href="#" class="btn_close" onclick="javascript:BOX_remove('cxjxrl_see');return false;"></a> </div>
+        <div class="clr"></div>
+        <div class="popup">
+            <div class="clr"></div>
+            <iframe id="iframename_cxjxrl" name="iframename_cxjxrl" border="0" framespacing="0" marginheight="0" marginwidth="0" style="width: 100%; height: 500px;" frameborder="0" allowTransparency="true"></iframe>
+            <div class="clr"></div>
+        </div>
+    </form>
+</div>
+<div id="NeworEdit1" style="display:none; width: 750px;border: 1px solid #2c4f72;-webkit-box-shadow: 0px 0px 5px #000;-moz-box-shadow: 0px 0px 5px #000;box-shadow: 0px 0px 5px #000; " >
+    <form name="addOrUpdfrom" id="addOrUpdfrom" method="post">
+        <div class="Floatleft Pct100 popup_bg">
+            <div class="popup_left">未确认课程</div>
+            <a href="#" class="btn_close" onclick="javascript:BOX_remove('NeworEdit1');return false;"></a> </div>
+        <div class="clr"></div>
+        <div class="popup">
+            <div class="clr"></div>
+            <iframe id="iframename_js" name="iframename_js" border="0" framespacing="0" marginheight="0" marginwidth="0" style="width: 730px; height: 410px;" frameborder="0" allowTransparency="true"></iframe>
+            <div class="clr"></div>
+        </div>
+    </form>
+</div>
+<div id="setting"> </div>
+
+
+<div id="divBox_jtxx" style="display:none; width: 800px;border: 1px solid #2c4f72;-webkit-box-shadow: 0px 0px 5px #000;-moz-box-shadow: 0px 0px 5px #000;box-shadow: 0px 0px 5px #000; " >
+    <div class="Floatleft Pct100 popup_bg">
+        <div class="popup_left">排课信息</div>
+        <a href="#" class="btn_close"  onclick="BOX_remove('divBox_jtxx');return false;"></a> </div>
+    <div class="clr"></div>
+    <div class="popup" style="max-height: 360px;overflow: auto">
+        <table width="100%"  cellpadding="0" cellspacing="0"  class="addlist mt10" style="border-collapse:collapse;">
+            <tr>
+                <th style="text-align:left;width: 90%" >&nbsp;&nbsp;选课要求： <span id="bz"></span></th>
+            </tr>
+        </table>
+
+        <div class="clr"></div>
+        <table width="100%"  cellpadding="0" cellspacing="0"  class="addlist mt10" style="border-collapse:collapse;">
+            <tr>
+                <th style="text-align: center;width: 20%"><font color="blue">日期</font></th>
+                <th style="text-align: center;width: 20%"><font color="blue">具体时间</font></th>
+                <th style="text-align: center;width: 30%"><font color="blue">地点</font></th>
+                <th style="text-align: center;width: 20%"><font color="blue">教师</font></th>
+                </th>
+            </tr>
+        </table>
+        <div id="cdjy_div_tabid" class="Pct100 FloatLeft" >
+            <table id="cdjy_tabid" width="100%"  cellpadding="0" cellspacing="0"  class="addlist mt4" style="border-collapse:collapse;">
+            </table>
+        </div>
+
+        <div class="clr"></div>
+        <div class="addlist_button1 mt5 ml10" style="float:right" id="qx_id">
+            <a href="javascript:void(0);" onclick="BOX_remove('divBox_jtxx');return false;"><span>关闭</span></a>
+        </div>
+        <div class="clr"></div>
+    </div>
+</div>
+
+
+
+</body>
+</html>

@@ -1,0 +1,6 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">HITable</string>
+    <string name="widget_name">今日课程</string>
+    <string name="widget_description">按时间显示今天的课程与状态</string>
+</resources>

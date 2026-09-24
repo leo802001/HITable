@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  哈工大教务（jwts.hit.edu.cn）在校内只开放 80 端口，必须走明文 HTTP。
+  Android 9 (API 28) 起默认禁止明文流量，所以这里精确放行这几个域名，
+  而不是在 application 上全局开 android:usesCleartextTraffic="true"，
+  避免放开对任意站点的明文访问。
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false" />
+
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- 教务系统：个人课表查询接口所在站点 -->
+        <domain includeSubdomains="true">jwts.hit.edu.cn</domain>
+        <!-- 统一身份认证（CAS）：WebView 登录会跳到这里 -->
+        <domain includeSubdomains="true">ids.hit.edu.cn</domain>
+    </domain-config>
+</network-security-config>
