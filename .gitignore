@@ -1,0 +1,27 @@
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+build/
+android/.gradle/
+android/local.properties
+work/
+outputs/
+tmp/
+.idea/
+.vscode/
+*.iml
+*.jks
+*.keystore
+key.properties
+*.log
+
+# 构建产物 / 历史备份（不发布）
+_recovery/
+*.apk
+*.aab
+*.zip
+android/.gradle/
+
+# 内部开发日志，不发布
+PROGRESS.md
