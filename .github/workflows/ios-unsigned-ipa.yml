@@ -1,0 +1,64 @@
+name: iOS unsigned IPA
+
+# 只在 ios 分支上跑，main 保持 Android 可发布状态不被牵连。
+# public 仓库的 macOS runner 分钟数免费且不限量（私有仓库要按 10x 计费）。
+on:
+  push:
+    branches: [ios]
+  workflow_dispatch:
+
+concurrency:
+  group: ios-ipa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.4
+          channel: stable
+          cache: true
+
+      # 先打版本信息，构建挂了时用来判断是工具链漂移还是代码问题
+      - name: 环境自检
+        run: |
+          flutter --version
+          xcodebuild -version
+          pod --version
+
+      - name: 拉依赖
+        run: flutter pub get
+
+      # no-codesign：不给任何团队签名，产出裸 .app。
+      # 真正的签名在本地由 Sideloadly 用免费 Apple ID 完成。
+      - name: 构建（不签名）
+        run: flutter build ios --release --no-codesign
+
+      # 构建失败时把 Podfile 打出来——ML Kit / Podfile platform 是最常见的失败点
+      - name: 失败时输出 Podfile（诊断用）
+        if: failure()
+        run: |
+          echo "=== ios/Podfile ==="
+          cat ios/Podfile 2>/dev/null || echo "(Podfile 未生成)"
+          echo "=== build 目录 ==="
+          ls -la build/ios/iphoneos/ 2>/dev/null || true
+
+      - name: 打包成未签名 IPA
+        run: |
+          set -e
+          cd build/ios/iphoneos
+          rm -rf Payload
+          mkdir -p Payload
+          cp -R Runner.app Payload/
+          zip -qry "$GITHUB_WORKSPACE/HITable-unsigned.ipa" Payload
+          ls -lh "$GITHUB_WORKSPACE/HITable-unsigned.ipa"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: HITable-unsigned-ipa
+          path: HITable-unsigned.ipa
+          retention-days: 14

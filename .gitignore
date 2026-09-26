@@ -25,3 +25,8 @@ android/.gradle/
 
 # 内部开发日志，不发布
 PROGRESS.md
+
+# iOS 签名文件（绝不入库）
+*.mobileprovision
+*.p12
+*.certSigningRequest
