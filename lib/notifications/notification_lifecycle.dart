@@ -43,7 +43,7 @@ class _NotificationLifecycleState extends ConsumerState<NotificationLifecycle>
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final initialDate = widget.initialDate;
       if (initialDate != null) _openDate(initialDate);
-      await widget.service.requestAndroidPermissions();
+      await widget.service.ensurePermissions();
       await _syncNotifications();
       // 小组件与提醒设置无关，单独同步一次。
       // 早期版本把两者绑在同一个方法里，导致「没开提醒 → 小组件永远空白」。

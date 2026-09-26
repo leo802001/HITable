@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:math' as math;
 
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
@@ -18,6 +21,11 @@ class NotificationService {
   NotificationService({FlutterLocalNotificationsPlugin? plugin})
     : _plugin = plugin ?? FlutterLocalNotificationsPlugin();
 
+  /// iOS 的 UNUserNotificationCenter 最多只允许挂 64 条待发通知，
+  /// 超出的会被系统**静默丢弃**（Android 的 AlarmManager 没有这个上限）。
+  /// 留一点余量给测试通知（id 900001）这类临时条目。
+  static const int _iosPendingLimit = 60;
+
   final FlutterLocalNotificationsPlugin _plugin;
   final _tappedDates = StreamController<DateTime>.broadcast();
   final _planner = const ReminderPlanner();
@@ -31,6 +39,15 @@ class NotificationService {
     await _plugin.initialize(
       settings: const InitializationSettings(
         android: AndroidInitializationSettings('ic_notification'),
+        // iOS 必须显式给一份 Darwin 配置：只填 android 的话，插件在 iOS 上
+        // 等于没初始化，之后请求权限、排程会全部静默失败。
+        // 三个 request*Permission 都留 false —— 权限等用户主动开提醒时再要，
+        // 免得一进 App 就弹授权窗（与 Android 侧的请求时机保持一致）。
+        iOS: DarwinInitializationSettings(
+          requestAlertPermission: false,
+          requestSoundPermission: false,
+          requestBadgePermission: false,
+        ),
       ),
       onDidReceiveNotificationResponse: (response) {
         final date = _parsePayload(response.payload);
@@ -42,13 +59,24 @@ class NotificationService {
     return _parsePayload(launch?.notificationResponse?.payload);
   }
 
-  Future<void> requestAndroidPermissions() async {
+  /// 平台中立的「确保拿到通知授权」入口。
+  /// Android 还要额外拿精确闹钟权限（否则息屏不响）；
+  /// iOS 没有这个概念，只需普通的通知授权。
+  Future<void> ensurePermissions() async {
     final android = _plugin
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >();
-    await android?.requestNotificationsPermission();
-    await android?.requestExactAlarmsPermission();
+    if (android != null) {
+      await android.requestNotificationsPermission();
+      await android.requestExactAlarmsPermission();
+      return;
+    }
+    final ios = _plugin
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >();
+    await ios?.requestPermissions(alert: true, badge: true, sound: true);
   }
 
   Future<bool> canScheduleExactNotifications() async {
@@ -56,7 +84,11 @@ class NotificationService {
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >();
-    return await android?.canScheduleExactNotifications() ?? false;
+    // iOS 没有「精确闹钟授权」这个概念 —— 通知由系统统一调度，本来就准时。
+    // 这里必须返回 true：否则 reschedule() 的前置判断会直接放弃排程，
+    // iOS 上等于一条提醒都排不出来。
+    if (android == null) return true;
+    return await android.canScheduleExactNotifications() ?? false;
   }
 
   Future<bool> notificationsEnabled() async {
@@ -64,7 +96,15 @@ class NotificationService {
         .resolvePlatformSpecificImplementation<
           AndroidFlutterLocalNotificationsPlugin
         >();
-    return await android?.areNotificationsEnabled() ?? false;
+    if (android != null) {
+      return await android.areNotificationsEnabled() ?? false;
+    }
+    final ios = _plugin
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >();
+    final options = await ios?.checkPermissions();
+    return options?.isEnabled ?? false;
   }
 
   Future<int> pendingNotificationCount() async =>
@@ -87,6 +127,10 @@ class NotificationService {
           playSound: mode == ReminderAlertMode.soundAndVibration,
           enableVibration: mode != ReminderAlertMode.notificationOnly,
         ),
+        // iOS 侧没有「渠道」概念，只有「响不响」，跟 Android 的 alertMode 对齐
+        iOS: DarwinNotificationDetails(
+          presentSound: mode == ReminderAlertMode.soundAndVibration,
+        ),
       ),
     );
   }
@@ -104,7 +148,7 @@ class NotificationService {
     if (term == null || !settings.enabled) return 0;
     if (!await canScheduleExactNotifications()) return 0;
     final currentTime = now ?? tz.TZDateTime.now(tz.local);
-    final plans = _planner.createPlans(
+    var plans = _planner.createPlans(
       now: currentTime,
       term: term,
       courses: schedule.courses,
@@ -112,7 +156,7 @@ class NotificationService {
       cancellations: schedule.cancellations,
       settings: settings,
     );
-    final lockScreenPlans = _planner.createLockScreenPlans(
+    var lockScreenPlans = _planner.createLockScreenPlans(
       now: currentTime,
       term: term,
       courses: schedule.courses,
@@ -120,6 +164,20 @@ class NotificationService {
       cancellations: schedule.cancellations,
       settings: settings,
     );
+
+    // iOS 超出 64 条的部分会被系统静默丢弃，所以先裁再排。
+    // 上课提醒是主体，优先保住；锁屏提示只是锦上添花，用剩下的额度。
+    // 两者都已经按时间升序，所以 sublist(0, n) 天然是「最近的那几条」。
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      final reminderRoom = math.min(plans.length, _iosPendingLimit);
+      final lockRoom = math.min(
+        lockScreenPlans.length,
+        _iosPendingLimit - reminderRoom,
+      );
+      plans = plans.sublist(0, reminderRoom);
+      lockScreenPlans = lockScreenPlans.sublist(0, lockRoom);
+    }
+
     final alertMode = settings.alertMode;
     final details = NotificationDetails(
       android: AndroidNotificationDetails(
@@ -131,6 +189,9 @@ class NotificationService {
         icon: 'ic_notification',
         playSound: alertMode == ReminderAlertMode.soundAndVibration,
         enableVibration: alertMode != ReminderAlertMode.notificationOnly,
+      ),
+      iOS: DarwinNotificationDetails(
+        presentSound: alertMode == ReminderAlertMode.soundAndVibration,
       ),
     );
     for (final plan in plans) {
@@ -168,6 +229,11 @@ class NotificationService {
           category: AndroidNotificationCategory.event,
           timeoutAfter: plan.timeoutAfterMilliseconds,
           styleInformation: BigTextStyleInformation(plan.body),
+        ),
+        // iOS 没有「锁屏卡片」这种常驻样式，落到普通通知即可
+        iOS: const DarwinNotificationDetails(
+          presentSound: false,
+          presentBadge: false,
         ),
       );
       await _plugin.zonedSchedule(

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show defaultTargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -108,16 +109,20 @@ class NotificationSettingsPage extends ConsumerWidget {
                         .read(notificationServiceProvider)
                         .openNotificationSettings(),
                   ),
-                  const Divider(height: 1, indent: 56),
-                  ListTile(
-                    leading: const Icon(Icons.alarm_on_outlined),
-                    title: const Text('精确闹钟权限'),
-                    subtitle: const Text('保证息屏时也能准点提醒'),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => ref
-                        .read(notificationServiceProvider)
-                        .requestAndroidPermissions(),
-                  ),
+                  // 「精确闹钟权限」是 Android 专有概念（息屏也要准点响）。
+                  // iOS 的通知由系统统一调度、本来就准时，没有这个开关，直接不显示。
+                  if (defaultTargetPlatform == TargetPlatform.android) ...[
+                    const Divider(height: 1, indent: 56),
+                    ListTile(
+                      leading: const Icon(Icons.alarm_on_outlined),
+                      title: const Text('精确闹钟权限'),
+                      subtitle: const Text('保证息屏时也能准点提醒'),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => ref
+                          .read(notificationServiceProvider)
+                          .ensurePermissions(),
+                    ),
+                  ],
                 ],
               ),
             ),

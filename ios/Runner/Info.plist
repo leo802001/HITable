@@ -26,6 +26,25 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<!-- 哈工大教务（jwts.hit.edu.cn）与统一身份认证（ids.hit.edu.cn）在校内
+		     只开放 80 端口，必须走明文 HTTP；iOS 的 ATS 默认拦截明文请求，
+		     不放开的话「WebView 登录 → 读课表」这条核心路径在 iOS 上会失败。
+		     这里只对 hit.edu.cn 及其子域精确放行，其余域名仍强制 HTTPS ——
+		     与 Android 侧 network_security_config.xml「精确放行、不做全局开关」
+		     是同一种安全思路。 -->
+		<key>NSExceptionDomains</key>
+		<dict>
+			<key>hit.edu.cn</key>
+			<dict>
+				<key>NSExceptionAllowsInsecureHTTPLoads</key>
+				<true/>
+				<key>NSIncludesSubdomains</key>
+				<true/>
+			</dict>
+		</dict>
+	</dict>
 	<key>NSCameraUsageDescription</key>
 	<string>用于拍摄课表照片以导入课程</string>
 	<key>NSPhotoLibraryUsageDescription</key>

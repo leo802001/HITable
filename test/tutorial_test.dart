@@ -87,7 +87,7 @@ class _FakeSettingsController extends NotificationSettingsController {
 
 class _FakeNotificationService extends NotificationService {
   @override
-  Future<void> requestAndroidPermissions() async {}
+  Future<void> ensurePermissions() async {}
 
   @override
   Future<int> reschedule({
