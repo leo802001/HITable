@@ -4,6 +4,12 @@
 > 生成时间：2026-09-24
 > 适用：在新工作窗口开始 iOS 端开发
 
+> 🔴 **动手前先读 §12「实战更新」（2026-09-26）** —— 本文档有三条结论已被
+> 实际动手**证伪**（§5.1「必须有 macOS」、§5.2 只提 7 天过期、§7.4 的对齐顺序），
+> 且新增了三个文档里没提的**硬伤**（ATS 明文 HTTP / 通知在 iOS 上完全失效 /
+> 免费签名不支持 App Groups 导致小组件无解）。
+> **与 §12 冲突处，以 §12 为准。**
+
 ---
 
 ## ⚠️ 0. 开工前必须知道的三个硬前提
@@ -601,6 +607,124 @@ cd ios && rm -rf Pods Podfile.lock && pod install   # Pod 依赖彻底重来
 5. **桌面小组件 WidgetKit**（工作量最大，但数据契约现成）
 
 外观美化那 6,000 多行 UI 代码基本可以原样跑起来，**不用操心**。
+
+---
+
+## 12. ⚠️ 实战更新（2026-09-26）：三条结论已被证伪，多条已落地
+
+> 本节由**实际动手后的结果**回填。§0–§11 原文**一句未改**（保留决策历史），
+> 但凡与本节冲突处，**以本节为准**。
+
+### 12.1 §5.1「iOS 开发必须有 macOS」—— 不准确
+
+**纯 Windows 已能真机自测**，链路全程 $0：
+
+```
+push 到 ios 分支 → GitHub Actions 的 macOS runner 构建 --no-codesign
+  → 未签名 IPA → Windows 下载 → Sideloadly 用免费 Apple ID 重签 → USB 装进 iPhone
+```
+
+- public 仓库的 macOS runner **免费且不限量**；单轮构建约 **4 分钟**。
+- 代价：**没有调试能力**（无热重载 / 日志 / 断点），改一行要等 CI + 重装。
+- 所以 §5.1 那条建议**依然成立、且理由更强了**：核心链路（WebView 教务登录）
+  最好**先用 Mac 打通**，盲调极耗精力；打通后日常改动用上面这条链即可。
+
+### 12.2 §5.2 漏了最要命的一条：**免费签名不支持 App Groups**
+
+| 免费个人签名限制 | 后果 |
+|---|---|
+| 证书 7 天过期 / 3 个 App / 3 台设备 | 自用够，可自动续签 |
+| ⛔ **App Groups 属付费专属能力** | **iOS 桌面小组件做不了** |
+
+iOS 上 App 与 Widget 是**两个进程**，唯一共享通道就是 App Group（§5.4）。
+免费 profile 里根本没有这项 entitlement → **§5.5 的 WidgetKit 在当前条件下无解，
+不是工程量问题**。要做小组件必须先上 $99 账号。
+
+### 12.3 §5.4 的 64 条裁剪 —— 已落地；且漏了两条更前置的坑
+
+64 条裁剪已在 `lib/notifications/notification_service.dart` 实现
+（iOS 侧「上课提醒优先、锁屏提示用剩余额度」裁到 60 条并留余量，Android 行为不变）。
+
+**但真正让 iOS 通知「完全死掉」的是另外两处**（均已修）：
+
+1. **`InitializationSettings` 只填了 `android:`，没有 `iOS:`** → 插件在 iOS 上
+   等于没初始化，请求权限与排程**全部静默失败**。
+2. **`canScheduleExactNotifications()` 内部只查 `AndroidFlutterLocalNotificationsPlugin`**
+   → iOS 上拿到 `null ?? false` → `reschedule()` 在**第一道前置判断**就 `return 0`，
+   **一条提醒都排不出来**。
+
+### 12.4 新增第三个硬伤：**ATS 明文 HTTP**（§5.3 完全没提）
+
+教务系统校内**只开 80 端口**（代码注释写死 `https://jwts.hit.edu.cn` 不可达），
+Android 侧靠 `res/xml/network_security_config.xml` 放行 —— 而 **iOS 侧原本什么都没有**。
+iOS 的 ATS 默认拦截明文，Flutter 官方文档明确会**抛异常**
+（`Insecure HTTP is not allowed by platform`）。
+
+**已在 `Info.plist` 补**（精确放行，不用全局 `NSAllowsArbitraryLoads`）：
+
+```xml
+<key>NSAppTransportSecurity</key><dict><key>NSExceptionDomains</key><dict>
+  <key>hit.edu.cn</key><dict>
+    <key>NSExceptionAllowsInsecureHTTPLoads</key><true/>
+    <key>NSIncludesSubdomains</key><true/>
+  </dict>
+</dict></dict>
+```
+
+一份配置同时覆盖 `jwts.hit.edu.cn` + `ids.hit.edu.cn`（对应 Android 放行的那两个域名），
+也对 WebView 加载的明文页面生效。
+
+### 12.5 iOS 脚手架的 3 个默认值（不修必踩）
+
+| 位置 | `flutter create` 默认值 | 已改为 |
+|---|---|---|
+| `Info.plist` `CFBundleDisplayName` | `Offline Course Schedule` | `HITable` |
+| `project.pbxproj` bundle id | `com.leocy.offlineCourseSchedule` | `com.leocy.hitable` |
+| `project.pbxproj` `IPHONEOS_DEPLOYMENT_TARGET` | `15.0` | **`15.5`**（ML Kit 最低要求） |
+
+### 12.6 Android 专有内容的清理（§3.4 提到过但没穷举入口）
+
+已全部用 `defaultTargetPlatform == android` 隔离，**Android 行为零变化**：
+
+- 「精确闹钟权限」入口、「查看国产 Android 后台设置」按钮 → iOS 隐藏
+- `magic_os_guide_page` 启动引导 → iOS 整块跳过（入口在 `notification_lifecycle.dart`）
+- 教程页第 7/8 步（小组件添加、后台放行）→ iOS 不展示
+- 外观页「桌面小组件配色 / 小组件背景」两组 → iOS 隐藏
+- 教程第 4 步与启动弹窗文案 → iOS 不再提「小组件」
+
+排查命令：`grep -rIn "国产\|自启动\|电池优化\|后台活动\|息屏\|MIUI\|ColorOS\|小组件" lib/`
+
+### 12.7 §5.2 的 `NSUserNotificationsUsageDescription` 是个**不存在的 key**
+
+iOS 根本没有这个 Info.plist 项，本地通知权限是**运行时**申请的 → **没有加它**。
+实际需要的只有 `NSCameraUsageDescription` / `NSPhotoLibraryUsageDescription`。
+
+### 12.8 §7.4 的对齐步骤有个顺序陷阱
+
+原文「先 `git commit`，再 `git reset --hard origin/main`」——
+后者会把刚提交的 `ios/` 脚手架从**工作区删掉**（commit 还在 reflog 里，但工作区没了）。
+**更稳的做法**是：从远端 main 建分支，再把 iOS 相关文件叠加进去：
+
+```bash
+git fetch origin
+git checkout -b ios origin/main
+git checkout <本地那条线的 ref> -- ios/ .metadata iOS-移植交接.md \
+    .gitignore analysis_options.yaml pubspec.lock .github/workflows/ios-unsigned-ipa.yml
+git commit -m "iOS: 引入 ios/ 脚手架与未签名 IPA 流水线"
+git push -u origin ios
+```
+
+这样 `ios` 与 `main` 有共同祖先（将来能正常合并），也不会把本地那份过时的
+`android/strings.xml` 带进 iOS 分支。
+
+### 12.9 当前状态
+
+- 分支 `ios` 已推送到远端，三轮构建全部成功，产物已拆包核对 Info.plist
+- Windows 环境已就绪：iTunes 12.13.11.1 / iCloud 7.21.0.23 /
+  Apple Mobile Device Support 19.4.0.10（服务 RUNNING）/ Sideloadly 0.60.0
+- **桌面小组件：本轮明确排除**（见 12.2）
+- 更完整的通用经验（含 Windows 全流程、并行下载提速、开发者模式顺序）
+  已沉淀在 skill `flutter-platform-porting` §5.6 / §九
 
 ---
 
