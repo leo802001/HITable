@@ -33,10 +33,23 @@ jobs:
       - name: 拉依赖
         run: flutter pub get
 
-      # no-codesign：不给任何团队签名，产出裸 .app。
-      # 真正的签名在本地由 Sideloadly 用免费 Apple ID 完成。
+      # 先 --no-codesign 产出裸 .app，再补一层 ad-hoc 签名。
+      # 为什么不能只留裸 .app：Sideloadly 0.60 对「主 bundle 完全未签名」的
+      # IPA 会直接报 `Invalid file`（实测错误码 f65043@1006:23a71c，与
+      # Predidit/Kazumi#1827 同款），它需要包里存在合法签名结构才能在本地重签。
+      # ad-hoc（`-s -`）不需要任何证书，只生成 _CodeSignature/CodeResources。
       - name: 构建（不签名）
         run: flutter build ios --release --no-codesign
+
+      - name: ad-hoc 签名（让产物具备签名结构，Sideloadly 才接受）
+        run: |
+          set -e
+          APP=build/ios/iphoneos/Runner.app
+          codesign --force --deep --sign - "$APP"
+          echo "=== 主 bundle 签名信息 ==="
+          codesign -dv "$APP" 2>&1 | head -8
+          echo "=== _CodeSignature 是否生成 ==="
+          ls -la "$APP/_CodeSignature/" || { echo "!! 仍无 _CodeSignature"; exit 1; }
 
       # 构建失败时把 Podfile 打出来——ML Kit / Podfile platform 是最常见的失败点
       - name: 失败时输出 Podfile（诊断用）
