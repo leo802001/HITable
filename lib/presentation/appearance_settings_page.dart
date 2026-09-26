@@ -8,6 +8,8 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path/path.dart' as p;
@@ -209,45 +211,54 @@ class AppearanceSettingsPage extends ConsumerWidget {
             ),
           ),
 
-          _Section(
-            title: '桌面小组件配色',
-            child: _WidgetColorPicker(
-              value: settings.widgetColorPreset,
-              customColors: settings.customColors,
-              colorScheme: settings.colorScheme,
-              onChanged: (value) => controller
-                  .apply(settings.copyWith(widgetColorPreset: value)),
-            ),
-          ),
-
-          _Section(
-            title: '小组件背景',
-            child: _WidgetBackgroundPicker(
-              settings: settings,
-              onToggle: (value) =>
-                  controller.apply(settings.copyWith(widgetUseBackground: value)),
-              onPickImage: () =>
-                  _pickWidgetBackgroundImage(context, controller, settings),
-              onClearImage: () => controller.apply(
-                settings.copyWith(
-                  widgetUseBackground: false,
-                  clearWidgetBackground: true,
+          // 桌面小组件的两项设置在 iOS 上暂时不展示：
+          // iOS 端小组件（WidgetKit）靠 App Group 共享容器与主 App 通信，
+          // 而 App Group 属付费开发者账号能力，免费个人签名拿不到，
+          // 所以 iOS 版暂时没有小组件可配，显示了反而让人困惑。
+          // 将来 iOS 端支持后，删掉这个平台判断即可恢复。
+          if (defaultTargetPlatform == TargetPlatform.android) ...[
+            _Section(
+              title: '桌面小组件配色',
+              child: _WidgetColorPicker(
+                value: settings.widgetColorPreset,
+                customColors: settings.customColors,
+                colorScheme: settings.colorScheme,
+                onChanged: (value) => controller.apply(
+                  settings.copyWith(widgetColorPreset: value),
                 ),
               ),
-              onBlurChanged: (value) => controller.apply(
-                settings.copyWith(widgetBackgroundBlur: value),
-              ),
-              onDimChanged: (value) => controller.apply(
-                settings.copyWith(widgetBackgroundDim: value),
-              ),
-              onCardOpacityChanged: (value) => controller.apply(
-                settings.copyWith(widgetCardOpacity: value),
-              ),
-              onTextOpacityChanged: (value) => controller.apply(
-                settings.copyWith(widgetTextOpacity: value),
+            ),
+
+            _Section(
+              title: '小组件背景',
+              child: _WidgetBackgroundPicker(
+                settings: settings,
+                onToggle: (value) => controller.apply(
+                  settings.copyWith(widgetUseBackground: value),
+                ),
+                onPickImage: () =>
+                    _pickWidgetBackgroundImage(context, controller, settings),
+                onClearImage: () => controller.apply(
+                  settings.copyWith(
+                    widgetUseBackground: false,
+                    clearWidgetBackground: true,
+                  ),
+                ),
+                onBlurChanged: (value) => controller.apply(
+                  settings.copyWith(widgetBackgroundBlur: value),
+                ),
+                onDimChanged: (value) => controller.apply(
+                  settings.copyWith(widgetBackgroundDim: value),
+                ),
+                onCardOpacityChanged: (value) => controller.apply(
+                  settings.copyWith(widgetCardOpacity: value),
+                ),
+                onTextOpacityChanged: (value) => controller.apply(
+                  settings.copyWith(widgetTextOpacity: value),
+                ),
               ),
             ),
-          ),
+          ],
 
           _Section(
             title: '其它',

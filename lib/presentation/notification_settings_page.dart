@@ -137,17 +137,23 @@ class NotificationSettingsPage extends ConsumerWidget {
               icon: const Icon(Icons.menu_book_outlined),
               label: const Text('查看使用教程'),
             ),
-            const SizedBox(height: 8),
-            OutlinedButton.icon(
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute<void>(
-                  builder: (_) => const MagicOsGuidePage(showBackButton: true),
+            // 这套引导讲的是国产 Android 的后台限制（自启动 / 电池优化），
+            // iOS 的通知由系统统一调度、不会被后台杀进程，没有对应设置，
+            // 所以在 iOS 上整块不展示。
+            if (defaultTargetPlatform == TargetPlatform.android) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) =>
+                        const MagicOsGuidePage(showBackButton: true),
+                  ),
                 ),
+                icon: const Icon(Icons.battery_saver_outlined),
+                label: const Text('查看国产 Android 后台设置'),
               ),
-              icon: const Icon(Icons.battery_saver_outlined),
-              label: const Text('查看国产 Android 后台设置'),
-            ),
+            ],
             const SizedBox(height: 24),
             Text('联系作者', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 8),

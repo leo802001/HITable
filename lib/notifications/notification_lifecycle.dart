@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -66,7 +68,10 @@ class _NotificationLifecycleState extends ConsumerState<NotificationLifecycle>
     if (currentSettings != null && !_startupFlowOpen) {
       if (!currentSettings.tutorialPromptCompleted) {
         _openTutorialPromptAfterBuild();
-      } else if (!currentSettings.magicOsGuideCompleted) {
+      } else if (defaultTargetPlatform == TargetPlatform.android &&
+          !currentSettings.magicOsGuideCompleted) {
+        // 这套引导只对国产 Android 有意义（自启动 / 电池优化），
+        // iOS 的通知由系统统一调度、不会被后台杀进程，不该弹出这个页面
         _openGuideAfterBuild();
       }
     }
@@ -148,7 +153,12 @@ class _NotificationLifecycleState extends ConsumerState<NotificationLifecycle>
         barrierDismissible: false,
         builder: (context) => AlertDialog(
           title: const Text('第一次使用，需要看看教程吗？'),
-          content: const Text('教程会用简单步骤说明怎样添加学期、导入课表、设置提醒和桌面小组件。'),
+          // iOS 本轮没有桌面小组件，弹出的提示里就不提它
+          content: Text(
+            defaultTargetPlatform == TargetPlatform.android
+                ? '教程会用简单步骤说明怎样添加学期、导入课表、设置提醒和桌面小组件。'
+                : '教程会用简单步骤说明怎样添加学期、导入课表、设置提醒。',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
