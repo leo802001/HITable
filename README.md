@@ -132,11 +132,6 @@ lib/
 flutter test
 ```
 
-## 参考与致谢
-
-统一身份认证的 WebView 交互思路参考了 [mmmlllnnn/TongJi_Canvas](https://github.com/mmmlllnnn/TongJi_Canvas)。本项目是独立的 Flutter 课表应用，不包含代签、多人账号或成绩管理功能，也不代表原项目作者为本项目背书。
-
-国家节假日数据依据中国政府网发布的国务院办公厅年度放假安排。
 
 ## 联系作者
 
